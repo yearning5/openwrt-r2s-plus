@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+/dts-v1/;
+#include "rk3328-nanopi-r2s.dts"
+
+/ {
+    model = "FriendlyARM NanoPi R2S Plus";
+    compatible = "friendlyarm,nanopi-r2s-plus", "rockchip,rk3328";
+};
+
+&emmc {
+    bus-width = <8>;
+    cap-mmc-highspeed;
+    mmc-ddr-1_8v;
+    mmc-hs200-1_8v;
+    non-removable;
+    vmmc-supply = <&vcc_io_33>;
+    vqmmc-supply = <&vcc18_emmc>;
+    status = "okay";
+};
