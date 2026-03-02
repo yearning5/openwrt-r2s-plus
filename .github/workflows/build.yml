@@ -45,7 +45,17 @@ jobs:
         cp patches/rk3328-nanopi-r2s-plus.dts \
           openwrt/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/
         cd openwrt
-        git apply $GITHUB_WORKSPACE/patches/001-r2s-plus-armv8-mk.patch
+        sed -i '/^TARGET_DEVICES += friendlyarm_nanopi-r2s$/a \
+          \
+          define Device\/friendlyarm_nanopi-r2s-plus\
+            $(call Device\/friendlyarm_nanopi-r2s)\
+            DEVICE_MODEL := NanoPi R2S Plus\
+            DEVICE_VARIANT := eMMC\
+            DEVICE_DTS := rockchip\/rk3328-nanopi-r2s-plus\
+            SUPPORTED_DEVICES += friendlyarm,nanopi-r2s-plus\
+          endef\
+          TARGET_DEVICES += friendlyarm_nanopi-r2s-plus' \
+                    target/linux/rockchip/image/armv8.mk
 
     - name: Add OAF feed
       run: |
