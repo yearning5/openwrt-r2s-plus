@@ -39,15 +39,13 @@ jobs:
       run: |
         git clone https://git.openwrt.org/openwrt/openwrt.git \
           --branch $OPENWRT_VERSION --depth 1 openwrt
-
-    - name: Apply R2S Plus eMMC patch
+    - name: Apply R2S Plus eMMC DTS patch
       run: |
+        mkdir -p openwrt/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/
+        cp patches/rk3328-nanopi-r2s-plus.dts \
+          openwrt/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/
         cd openwrt
-        # Copy new DTS file
-        cp $GITHUB_WORKSPACE/patches/rk3328-nanopi-r2s-plus.dts \
-          target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/
-        # Apply Makefile patch
-        git apply $GITHUB_WORKSPACE/patches/001-r2s-plus-emmc.patch
+        git apply $GITHUB_WORKSPACE/patches/001-r2s-plus-armv8-mk.patch
 
     - name: Add OAF feed
       run: |
