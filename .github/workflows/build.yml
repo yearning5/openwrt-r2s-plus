@@ -46,14 +46,11 @@ jobs:
 
     - name: Apply R2S Plus eMMC DTS and board definition
       run: |
-        # Create DTS directory and copy R2S Plus DTS
         mkdir -p openwrt/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/
         cp patches/rk3328-nanopi-r2s-plus.dts \
           openwrt/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/
-
-        # Insert R2S Plus board definition into armv8.mk
-        # Uses nanopi-r2s-rk3328 u-boot (same hardware, R2S u-boot works for R2S Plus)
         cd openwrt
+        # Insert R2S Plus board — reuses nanopi-r2s-rk3328 u-boot (same RK3328 chip)
         sed -i '/^TARGET_DEVICES += friendlyarm_nanopi-r2s$/a \
         \
         define Device\/friendlyarm_nanopi-r2s-plus\
@@ -85,7 +82,25 @@ jobs:
         make download -j8
         find dl -size -1024c -delete
 
-    - name: Build firmware
+    # Build tools and toolchain first, then u-boot explicitly
+    # This guarantees nanopi-r2s-rk3328-u-boot-rockchip.bin exists in staging_dir
+    # before the parallel main build tries to assemble the R2S Plus image
+    - name: Build tools
+      run: |
+        cd openwrt
+        make tools/compile -j$(nproc) V=s
+
+    - name: Build toolchain
+      run: |
+        cd openwrt
+        make toolchain/compile -j$(nproc) V=s
+
+    - name: Build u-boot (must be before main build)
+      run: |
+        cd openwrt
+        make package/boot/uboot-rockchip/compile -j$(nproc) V=s
+
+    - name: Build firmware and all packages
       run: |
         cd openwrt
         make -j$(nproc) V=s 2>&1 | tee build.log | \
