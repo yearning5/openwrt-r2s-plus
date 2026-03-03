@@ -98,8 +98,7 @@ jobs:
     - name: Build u-boot for R2S only (must be before main build)
       run: |
         cd openwrt
-        make package/boot/uboot-rockchip/compile \
-          VARIANT=nanopi-r2s-rk3328 -j$(nproc) V=s
+        make package/uboot-rockchip-nanopi-r2s/compile -j$(nproc) V=s
 
     - name: Build firmware and all packages
       run: |
