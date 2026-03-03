@@ -39,6 +39,12 @@ jobs:
       run: |
         git clone https://git.openwrt.org/openwrt/openwrt.git \
           --branch $OPENWRT_VERSION --depth 1 openwrt
+    
+    - name: Add OAF feed
+      run: |
+        cd openwrt
+        git clone $OAF_REPO package/oaf-app-filter
+    
     - name: Apply R2S Plus eMMC DTS patch
       run: |
         mkdir -p openwrt/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/
@@ -48,10 +54,7 @@ jobs:
         sed -i '/^TARGET_DEVICES += friendlyarm_nanopi-r2s$/a define Device\/friendlyarm_nanopi-r2s-plus\n  $(call Device\/friendlyarm_nanopi-r2s)\n  DEVICE_MODEL := NanoPi R2S Plus\n  DEVICE_VARIANT := eMMC\n  DEVICE_DTS := rockchip\/rk3328-nanopi-r2s-plus\n  UBOOT_DEVICE_NAME := nanopi-r2s-plus-rk3328\n  SUPPORTED_DEVICES += friendlyarm,nanopi-r2s-plus\nendef\nTARGET_DEVICES += friendlyarm_nanopi-r2s-plus' \
           target/linux/rockchip/image/armv8.mk
 
-    - name: Add OAF feed
-      run: |
-        cd openwrt
-        git clone $OAF_REPO package/oaf-app-filter
+    
     - name: Fetch FriendlyARM u-boot for R2S Plus
       run: |
         mkdir -p openwrt/staging_dir/target-aarch64_generic_musl/image
