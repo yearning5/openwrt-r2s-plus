@@ -1,7 +1,7 @@
 name: Build OpenWrt R2S Plus + OAF
 
 on:
-  workflow_dispatch:           # manual trigger — button in Actions tab
+  workflow_dispatch:
     inputs:
       openwrt_version:
         description: 'OpenWrt tag (e.g. v24.10.3)'
@@ -10,7 +10,6 @@ on:
 
 env:
   OPENWRT_VERSION: ${{ github.event.inputs.openwrt_version }}
-  TARGET: rockchip/armv8
   OAF_REPO: https://github.com/destan19/OpenAppFilter
 
 jobs:
@@ -39,34 +38,36 @@ jobs:
       run: |
         git clone https://git.openwrt.org/openwrt/openwrt.git \
           --branch $OPENWRT_VERSION --depth 1 openwrt
-    
+
     - name: Add OAF feed
       run: |
         cd openwrt
-        git clone $OAF_REPO package/oaf-app-filter
-    
-    - name: Apply R2S Plus eMMC DTS patch
+        git clone $OAF_REPO --depth 1 package/oaf-app-filter
+
+    - name: Apply R2S Plus eMMC DTS and board definition
       run: |
+        # Create DTS directory and copy R2S Plus DTS
         mkdir -p openwrt/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/
         cp patches/rk3328-nanopi-r2s-plus.dts \
           openwrt/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/
-        cd openwrt
-        sed -i '/^TARGET_DEVICES += friendlyarm_nanopi-r2s$/a define Device\/friendlyarm_nanopi-r2s-plus\n  $(call Device\/friendlyarm_nanopi-r2s)\n  DEVICE_MODEL := NanoPi R2S Plus\n  DEVICE_VARIANT := eMMC\n  DEVICE_DTS := rockchip\/rk3328-nanopi-r2s-plus\n  UBOOT_DEVICE_NAME := nanopi-r2s-plus-rk3328\n  SUPPORTED_DEVICES += friendlyarm,nanopi-r2s-plus\nendef\nTARGET_DEVICES += friendlyarm_nanopi-r2s-plus' \
-          target/linux/rockchip/image/armv8.mk
 
-    
-    - name: Fetch FriendlyARM u-boot for R2S Plus
-      run: |
-        mkdir -p openwrt/staging_dir/target-aarch64_generic_musl/image
-        wget -q https://github.com/friendlyarm/rkbin/raw/master/rk33/rk3328_miniloader_v2.55.bin \
-          -O /tmp/miniloader.bin || true
-        # Download prebuilt u-boot from FriendlyARM
-        wget -q "https://github.com/friendlyarm/uboot-rockchip/releases/download/latest/nanopi-r2s-plus-rk3328-u-boot-rockchip.bin" \
-          -O openwrt/staging_dir/target-aarch64_generic_musl/image/nanopi-r2s-plus-rk3328-u-boot-rockchip.bin 2>/dev/null || \
-        wget -q "https://github.com/friendlyarm/uboot-rockchip/releases/download/latest/nanopi-r2s-rk3328-u-boot-rockchip.bin" \
-          -O openwrt/staging_dir/target-aarch64_generic_musl/image/nanopi-r2s-plus-rk3328-u-boot-rockchip.bin
-          
-    - name: Update & install feeds
+        # Insert R2S Plus board definition into armv8.mk
+        # Uses nanopi-r2s-rk3328 u-boot (same hardware, R2S u-boot works for R2S Plus)
+        cd openwrt
+        sed -i '/^TARGET_DEVICES += friendlyarm_nanopi-r2s$/a \
+        \
+        define Device\/friendlyarm_nanopi-r2s-plus\
+          $(call Device\/friendlyarm_nanopi-r2s)\
+          DEVICE_MODEL := NanoPi R2S Plus\
+          DEVICE_VARIANT := eMMC\
+          DEVICE_DTS := rockchip\/rk3328-nanopi-r2s-plus\
+          UBOOT_DEVICE_NAME := nanopi-r2s-rk3328\
+          SUPPORTED_DEVICES += friendlyarm,nanopi-r2s-plus\
+        endef\
+        TARGET_DEVICES += friendlyarm_nanopi-r2s-plus' \
+                  target/linux/rockchip/image/armv8.mk
+
+    - name: Update and install feeds
       run: |
         cd openwrt
         ./scripts/feeds update -a
@@ -82,14 +83,15 @@ jobs:
       run: |
         cd openwrt
         make download -j8
-        find dl -size -1024c -delete   # remove failed small downloads
+        find dl -size -1024c -delete
+
     - name: Build firmware
       run: |
         cd openwrt
         make -j$(nproc) V=s 2>&1 | tee build.log | \
-          grep -E "^(make|ERROR|WARNING)" || true
-        # Retry single-threaded on failure for clearer errors
-        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+          grep -E "^(make\[|ERROR|WARNING)" || true
+        if grep -q "^make.*Error" build.log; then
+          echo "Retrying single-threaded for clearer errors..."
           make -j1 V=s
         fi
 
@@ -97,7 +99,8 @@ jobs:
       run: |
         mkdir -p output
         cp openwrt/bin/targets/rockchip/armv8/*r2s-plus* output/ 2>/dev/null || true
-        cp openwrt/bin/packages/aarch64_cortex-a53/oaf/*.ipk output/ 2>/dev/null || true
+        find openwrt/bin/packages -name "*oaf*" -o -name "*appfilter*" | \
+          xargs -I{} cp {} output/ 2>/dev/null || true
         cp openwrt/build.log output/
 
     - name: Upload firmware
