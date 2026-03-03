@@ -70,10 +70,6 @@ jobs:
         cd openwrt
         make download -j8
         find dl -size -1024c -delete   # remove failed small downloads
-    - name: Pre-build u-boot for R2S (required by R2S Plus)
-      run: |
-        cd openwrt
-        make package/boot/uboot-rockchip/compile V=s -j$(nproc)
     - name: Build firmware
       run: |
         cd openwrt
