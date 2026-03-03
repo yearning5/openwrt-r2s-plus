@@ -4,8 +4,8 @@ on:
   workflow_dispatch:           # manual trigger — button in Actions tab
     inputs:
       openwrt_version:
-        description: 'OpenWrt tag (e.g. v24.10.0)'
-        default: 'v24.10.0'
+        description: 'OpenWrt tag (e.g. v24.10.3)'
+        default: 'v24.10.3'
         required: true
 
 env:
@@ -70,8 +70,11 @@ jobs:
         cd openwrt
         make download -j8
         find dl -size -1024c -delete   # remove failed small downloads
-
-    - name: Build
+    - name: Pre-build u-boot for R2S (required by R2S Plus)
+      run: |
+        cd openwrt
+        make package/boot/uboot-rockchip/compile V=s -j$(nproc)
+    - name: Build firmware
       run: |
         cd openwrt
         make -j$(nproc) V=s 2>&1 | tee build.log | \
