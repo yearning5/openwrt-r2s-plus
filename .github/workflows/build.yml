@@ -52,7 +52,17 @@ jobs:
       run: |
         cd openwrt
         git clone $OAF_REPO package/oaf-app-filter
-
+    - name: Fetch FriendlyARM u-boot for R2S Plus
+      run: |
+        mkdir -p openwrt/staging_dir/target-aarch64_generic_musl/image
+        wget -q https://github.com/friendlyarm/rkbin/raw/master/rk33/rk3328_miniloader_v2.55.bin \
+          -O /tmp/miniloader.bin || true
+        # Download prebuilt u-boot from FriendlyARM
+        wget -q "https://github.com/friendlyarm/uboot-rockchip/releases/download/latest/nanopi-r2s-plus-rk3328-u-boot-rockchip.bin" \
+          -O openwrt/staging_dir/target-aarch64_generic_musl/image/nanopi-r2s-plus-rk3328-u-boot-rockchip.bin 2>/dev/null || \
+        wget -q "https://github.com/friendlyarm/uboot-rockchip/releases/download/latest/nanopi-r2s-rk3328-u-boot-rockchip.bin" \
+          -O openwrt/staging_dir/target-aarch64_generic_musl/image/nanopi-r2s-plus-rk3328-u-boot-rockchip.bin
+          
     - name: Update & install feeds
       run: |
         cd openwrt
